@@ -18,57 +18,53 @@ DEMUCS_MODEL = "htdemucs"
 # Define o caminho onde o Demucs salvará os stems
 STEMS_FOLDER = f"separated/{DEMUCS_MODEL}/{os.path.splitext(os.path.basename(FILE_NAME))[0]}"
 
-
-def processar_bpm_dinamico(drums_wav_file, song_file):
+def processar_bpm_dinamico(arquivo_drums, arquivo_original):
     """
     Tenta detectar o MAPA de BPM do 'drums.wav'.
     Se falhar ou estiver silencioso, usa o arquivo original.
     """
-    print("--- 3. Rodando Librosa (BPM Dinâmico) ---")
-    file_type = ""
+    print("--- 3. Rodando Librosa (BPM Dinâmico V2) ---")
+    arquivo_para_analise = ""
     y, sr = None, None
     
     try:
-        y_drums, sr_drums = librosa.load(drums_wav_file)
-        
-        # verifica se o arquivo de bateria nao está silencioso (Soma absoluta de todas as amostras. Se for muito baixa, está silencioso)
+        y_drums, sr_drums = librosa.load(arquivo_drums)
         if np.sum(np.abs(y_drums)) > 1000:
             print("INFO: Bateria detectada. Usando 'drums.wav' para análise de BPM.")
             y, sr = y_drums, sr_drums
-            file_type = "Drums"
+            arquivo_para_analise = "Drums"
         else:
             print("AVISO: 'drums.wav' está silencioso. Usando arquivo original para BPM.")
-            y, sr = librosa.load(song_file)
-            file_type = "Original"
+            y, sr = librosa.load(arquivo_original)
+            arquivo_para_analise = "Original"
             
     except Exception:
-        # se falhar (ex: arquivo não encontrado), usa o original
         print(f"AVISO: Falha ao carregar 'drums.wav'. Usando arquivo original para BPM.")
-        y, sr = librosa.load(song_file)
-        file_type = "Original"
+        y, sr = librosa.load(arquivo_original)
+        arquivo_para_analise = "Original"
 
-    # LÓGICA DO MAPA DE BPM
-    # extrai o "onset strength",  "pulso" rítmico da música
-    onset_env = librosa.onset.onset_detect(y=y, sr=sr, units='time')
+    # --- LÓGICA DO MAPA DE BPM (A CORREÇÃO ESTÁ AQUI) ---
     
-    # estima o tempo (BPM) baseado nesse pulso
-    # isso dá um array de BPMs ao longo do tempo
-    tempo = librosa.feature.tempo(y=y, sr=sr, onset_envelope=onset_env)
+    # 1. Calcula o "envelope de força" (o "pulso" rítmico da música)
+    #    Esta é a função que eu deveria ter usado!
+    onset_strength = librosa.onset.onset_strength(y=y, sr=sr)
     
-    # pega o timestamp para cada valor de BPM
-    # o `tempo` é um array [120.1, 120.2, 120.3, 80.0, 80.1, ...]
-    # o `times` é um array [  0.0,   0.5,   1.0,  1.5,  2.0, ...]
+    # 2. Estima o tempo (BPM) baseado nesse *envelope* de pulso
+    #    hop_length padrão é 512, o que alinha com o onset_strength
+    tempo = librosa.feature.tempo(onset_envelope=onset_strength, sr=sr)
+    
+    # 3. Pega os carimbos de tempo (timestamps) para cada valor de BPM
+    #    Isso vai criar um array [ 0.0, 0.5, 1.0, 1.5, ... ]
     times = librosa.times_like(tempo, sr=sr)
     
-    
-    bpm_map = []
+    # 4. Formata para o JSON (o que você quer ver)
+    bpm_mapa = []
     for t, b in zip(times, tempo):
-        bpm_map.append({"tempo_seg": round(t, 2), "bpm": round(b, 2)})
+        bpm_mapa.append({"tempo_seg": round(t, 2), "bpm": round(b, 2)})
 
-    print(f"BPM dinâmico extraído (baseado em '{file_type}').")
+    print(f"BPM dinâmico extraído (baseado em '{arquivo_para_analise}').")
     print("-------------------------------------------\n")
-    return bpm_map
-
+    return bpm_mapa
 
 def main():
     total_start= time.time()
