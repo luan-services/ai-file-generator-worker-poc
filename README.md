@@ -68,3 +68,27 @@ No próximo poc, é necessário mudar o librosa p usar o arquivo drums.wav gerad
 em drums, é preciso ser capaz de reconhecer isso e usar other.wav. (voz, piano, guitarra, etc).
 
 Também é necessário que o librosa seja capaz de pegar o bpm continuo, ex: segundo 1-20 - 80bpm / segundo 21-30 - 60bpm / segundo 31-120-fim - 80bpm
+
+## t-2.py e t-3.py
+
+Falhou miserávelmente, librosa é boa para pegar o bpm médio das músicas, mas quando se trata de saber o bpm em cada instante em tempo real, não é uma alternativa víavel. O t-4 em diante usará a library madmom.
+
+## t-4.py
+
+Foi necessário realizar o downgrade do python 3.13.1 pro python 3.11. Ao invés de baixar, estou usando o ambiente virtual do mini conda. É necessário apagar o .venv antigo, ativar o ambiente global do mini conda (py 3.11) e recriar o .venv normalmente.
+
+É necessário baixar e instalar visual compiler C++
+
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+pip install demucs librosa
+pip install Cython
+pip install git+https://github.com/CPJKU/madmom.git
+pip install chord-extractor soundfile
+
+
+t-4.py está dando problema por estar usando drums.wav e o madmom não lidar bem com silencio, t-5.py teta usar o audio completo.
+
+
+## t-5.py, t-6.py
+
+Acredito que a versão mais estável seja t-5 com drums.
